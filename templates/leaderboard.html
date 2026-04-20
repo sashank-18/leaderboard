@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GameBoard — Live Leaderboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL
+═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --bg:        #102C26;
+  --bg2:       #0a1f1b;
+  --bg3:       #071510;
+  --champ:     #F7E7CE;
+  --champ2:    #e8d4b5;
+  --champ3:    #c9b89a;
+  --accent:    #4fffb0;
+  --accent2:   #00e5ff;
+  --gold:      #FFD700;
+  --silver:    #C0C0C0;
+  --bronze:    #CD7F32;
+  --danger:    #ff4e6a;
+  --warn:      #ff9f43;
+  --glass-bg:  rgba(16, 44, 38, 0.6);
+  --glass-bdr: rgba(247, 231, 206, 0.15);
+  --row-hover: rgba(247, 231, 206, 0.06);
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  min-height: 100vh;
+  background: var(--bg3);
+  font-family: 'Rajdhani', sans-serif;
+  color: var(--champ);
+  overflow-x: hidden;
+}
+
+/* ── Full-page background ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(16,44,38,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(7,21,16,0.9) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent, transparent 80px, rgba(79,255,176,0.02) 80px, rgba(79,255,176,0.02) 81px),
+    repeating-linear-gradient(90deg, transparent, transparent 80px, rgba(79,255,176,0.02) 80px, rgba(79,255,176,0.02) 81px),
+    linear-gradient(160deg, #0a1f1b 0%, #071510 100%);
+  z-index: 0;
+}
+
+/* ── Ambient orbs ── */
+.orb {
+  position: fixed; border-radius: 50%;
+  filter: blur(100px); opacity: 0.12;
+  animation: orb-drift ease-in-out infinite alternate;
+  pointer-events: none; z-index: 0;
+}
+.orb1 { width:600px;height:600px;background:#4fffb0;top:-200px;left:-200px;animation-duration:16s; }
+.orb2 { width:500px;height:500px;background:#00e5ff;bottom:-150px;right:-150px;animation-duration:20s;animation-delay:-8s; }
+.orb3 { width:350px;height:350px;background:#F7E7CE;top:40%;left:50%;animation-duration:18s;animation-delay:-5s;opacity:0.05; }
+@keyframes orb-drift {
+  from { transform: translate(0,0) scale(1); }
+  to   { transform: translate(50px,40px) scale(1.1); }
+}
+
+/* ── Particles ── */
+.particle {
+  position: fixed; border-radius: 50%;
+  animation: p-float linear infinite; opacity: 0; z-index: 0;
+}
+@keyframes p-float {
+  0%   { transform:translateY(100vh) scale(0); opacity:0; }
+  10%  { opacity:0.6; }
+  90%  { opacity:0.2; }
+  100% { transform:translateY(-50px) scale(2); opacity:0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════════════════════════════════ */
+.page {
+  position: relative; z-index: 10;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADER / NAV
+═══════════════════════════════════════════════════════════════════════════ */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--glass-bdr);
+  margin-bottom: 60px;
+  animation: slide-down 0.6s ease both;
+}
+@keyframes slide-down {
+  from { opacity:0; transform:translateY(-20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.topbar-left { display:flex;align-items:center;gap:14px; }
+.top-icon {
+  width:42px;height:42px;
+  background:linear-gradient(135deg,rgba(79,255,176,0.2),rgba(0,229,255,0.15));
+  border:1px solid rgba(79,255,176,0.35);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 16px rgba(79,255,176,0.2);
+}
+.top-icon svg { width:22px;height:22px; }
+.brand {
+  font-family:'Orbitron',monospace;font-size:18px;font-weight:900;
+  letter-spacing:4px;text-transform:uppercase;
+  color:var(--champ);
+}
+.brand-sub { font-size:10px;letter-spacing:3px;color:var(--accent);opacity:0.8; }
+
+.topbar-right { display:flex;align-items:center;gap:16px; }
+
+.player-badge {
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;
+  background:var(--glass-bg);
+  border:1px solid var(--glass-bdr);
+  border-radius:30px;
+  font-size:13px;font-weight:600;letter-spacing:0.5px;
+}
+.player-dot {
+  width:8px;height:8px;border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 8px var(--accent);
+  animation:dot-pulse 2s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%,100%{box-shadow:0 0 6px var(--accent);}
+  50%    {box-shadow:0 0 14px var(--accent);}
+}
+
+{% if is_admin %}
+.badge-admin {
+  font-size:10px;letter-spacing:2px;padding:3px 8px;
+  background:rgba(255,215,0,0.15);
+  border:1px solid rgba(255,215,0,0.4);
+  border-radius:4px;color:var(--gold);
+  text-transform:uppercase;
+}
+{% endif %}
+
+.btn-logout {
+  padding:8px 18px;
+  background:rgba(255,78,106,0.12);
+  border:1px solid rgba(255,78,106,0.35);
+  border-radius:8px;
+  color:rgba(255,78,106,0.85);
+  font-family:'Rajdhani',sans-serif;font-size:13px;
+  font-weight:600;letter-spacing:1px;text-transform:uppercase;
+  text-decoration:none;cursor:pointer;
+  transition:all 0.25s;
+}
+.btn-logout:hover {
+  background:rgba(255,78,106,0.22);
+  box-shadow:0 0 16px rgba(255,78,106,0.25);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HERO SECTION
+═══════════════════════════════════════════════════════════════════════════ */
+.hero {
+  text-align:center;margin-bottom:64px;
+  animation:hero-in 0.9s cubic-bezier(.22,1,.36,1) 0.1s both;
+}
+@keyframes hero-in {
+  from { opacity:0; transform:translateY(30px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.live-badge {
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 16px;
+  background:rgba(79,255,176,0.1);
+  border:1px solid rgba(79,255,176,0.3);
+  border-radius:20px;
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--accent);margin-bottom:20px;
+}
+.live-dot {
+  width:7px;height:7px;border-radius:50%;
+  background:var(--accent);
+  animation:dot-pulse 1.5s ease-in-out infinite;
+}
+
+.hero-title {
+  font-family:'Orbitron',monospace;
+  font-size:clamp(36px, 6vw, 58px);
+  font-weight:900;letter-spacing:3px;
+  line-height:1.1;
+  color:var(--champ);
+  text-shadow:0 0 40px rgba(247,231,206,0.3);
+}
+.hero-title em {
+  font-style:normal;
+  background:linear-gradient(135deg,#4fffb0,#00e5ff);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.hero-sub {
+  margin-top:14px;font-size:15px;
+  color:rgba(247,231,206,0.45);letter-spacing:1px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATS ROW
+═══════════════════════════════════════════════════════════════════════════ */
+.stats-row {
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+  margin-bottom:48px;
+  animation:fade-up 0.7s ease 0.3s both;
+}
+@keyframes fade-up {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.stat-card {
+  background:var(--glass-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-bdr);
+  border-radius:14px;
+  padding:20px 24px;
+  text-align:center;
+  transition:transform 0.25s,box-shadow 0.25s;
+}
+.stat-card:hover {
+  transform:translateY(-3px);
+  box-shadow:0 8px 32px rgba(0,0,0,0.3),0 0 20px rgba(79,255,176,0.1);
+}
+.stat-val {
+  font-family:'Orbitron',monospace;font-size:26px;font-weight:900;
+  color:var(--champ);letter-spacing:1px;
+}
+.stat-lbl {
+  font-size:11px;letter-spacing:2.5px;text-transform:uppercase;
+  color:rgba(247,231,206,0.45);margin-top:6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEADERBOARD SECTION
+═══════════════════════════════════════════════════════════════════════════ */
+.lb-section {
+  animation:fade-up 0.7s ease 0.4s both;
+}
+
+.section-header {
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;
+}
+.section-title {
+  font-family:'Orbitron',monospace;font-size:13px;font-weight:700;
+  letter-spacing:4px;text-transform:uppercase;color:var(--champ2);
+  opacity:0.75;
+}
+
+.refresh-btn {
+  display:flex;align-items:center;gap:7px;
+  padding:7px 14px;
+  background:rgba(79,255,176,0.1);
+  border:1px solid rgba(79,255,176,0.25);
+  border-radius:8px;
+  color:var(--accent);font-family:'Rajdhani',sans-serif;
+  font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all 0.25s;
+}
+.refresh-btn:hover { background:rgba(79,255,176,0.18);box-shadow:0 0 14px rgba(79,255,176,0.2); }
+.refresh-btn svg { transition:transform 0.5s; }
+.refresh-btn:hover svg { transform:rotate(180deg); }
+
+/* ── Glass table ── */
+.lb-card {
+  background:var(--glass-bg);
+  backdrop-filter:blur(24px) saturate(1.3);
+  -webkit-backdrop-filter:blur(24px) saturate(1.3);
+  border:1px solid var(--glass-bdr);
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 8px 60px rgba(0,0,0,0.4),inset 0 1px 0 rgba(247,231,206,0.08);
+}
+
+.lb-thead {
+  display:grid;grid-template-columns:64px 1fr 160px 100px;
+  padding:14px 24px;
+  border-bottom:1px solid var(--glass-bdr);
+  background:rgba(0,0,0,0.2);
+}
+.lb-thead span {
+  font-size:10px;letter-spacing:3px;text-transform:uppercase;
+  color:rgba(247,231,206,0.35);font-weight:600;
+}
+.lb-thead span:last-child { text-align:right; }
+.lb-thead span:nth-child(3) { text-align:center; }
+
+.lb-body { padding:8px 0; }
+
+/* ── Row ── */
+.lb-row {
+  display:grid;grid-template-columns:64px 1fr 160px 100px;
+  align-items:center;
+  padding:14px 24px;
+  border-bottom:1px solid rgba(247,231,206,0.05);
+  transition:background 0.25s,transform 0.2s;
+  cursor:default;
+  animation:row-in 0.5s ease both;
+}
+.lb-row:last-child { border-bottom:none; }
+.lb-row:hover { background:var(--row-hover); transform:translateX(3px); }
+
+@keyframes row-in {
+  from { opacity:0; transform:translateX(-16px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+
+/* staggered delays */
+.lb-row:nth-child(1)  { animation-delay:0.05s; }
+.lb-row:nth-child(2)  { animation-delay:0.10s; }
+.lb-row:nth-child(3)  { animation-delay:0.15s; }
+.lb-row:nth-child(4)  { animation-delay:0.20s; }
+.lb-row:nth-child(5)  { animation-delay:0.25s; }
+.lb-row:nth-child(6)  { animation-delay:0.30s; }
+.lb-row:nth-child(7)  { animation-delay:0.35s; }
+.lb-row:nth-child(8)  { animation-delay:0.40s; }
+.lb-row:nth-child(9)  { animation-delay:0.45s; }
+.lb-row:nth-child(10) { animation-delay:0.50s; }
+
+/* ── #1 rank glow pulse ── */
+.lb-row.rank-1 {
+  background:linear-gradient(90deg,rgba(255,215,0,0.07),transparent);
+  animation:row-in 0.5s ease both, rank1-pulse 3s ease-in-out 1s infinite;
+}
+@keyframes rank1-pulse {
+  0%,100%{ box-shadow:none; }
+  50%    { box-shadow:inset 0 0 40px rgba(255,215,0,0.07); }
+}
+
+/* ── Rank badge ── */
+.rank-badge {
+  font-family:'Orbitron',monospace;font-size:16px;font-weight:900;
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  letter-spacing:0;
+}
+.rank-1 .rank-badge {
+  background:linear-gradient(135deg,rgba(255,215,0,0.25),rgba(255,215,0,0.1));
+  border:1px solid rgba(255,215,0,0.5);color:var(--gold);
+  box-shadow:0 0 16px rgba(255,215,0,0.3);
+  font-size:18px;
+}
+.rank-2 .rank-badge {
+  background:linear-gradient(135deg,rgba(192,192,192,0.2),rgba(192,192,192,0.08));
+  border:1px solid rgba(192,192,192,0.4);color:var(--silver);
+}
+.rank-3 .rank-badge {
+  background:linear-gradient(135deg,rgba(205,127,50,0.2),rgba(205,127,50,0.08));
+  border:1px solid rgba(205,127,50,0.4);color:var(--bronze);
+}
+.rank-other .rank-badge {
+  background:rgba(247,231,206,0.06);
+  border:1px solid rgba(247,231,206,0.12);
+  color:rgba(247,231,206,0.45);font-size:13px;
+}
+
+/* ── Player name ── */
+.player-info { display:flex;align-items:center;gap:12px; }
+.avatar {
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',monospace;font-size:14px;font-weight:900;
+  flex-shrink:0;
+  border:1px solid var(--glass-bdr);
+}
+.rank-1 .avatar { background:linear-gradient(135deg,rgba(255,215,0,0.3),rgba(255,165,0,0.15));color:var(--gold); }
+.rank-2 .avatar { background:linear-gradient(135deg,rgba(192,192,192,0.25),rgba(150,150,150,0.1));color:var(--silver); }
+.rank-3 .avatar { background:linear-gradient(135deg,rgba(205,127,50,0.25),rgba(160,90,20,0.1));color:var(--bronze); }
+.rank-other .avatar { background:rgba(79,255,176,0.08);color:var(--accent); }
+
+.p-name {
+  font-weight:700;font-size:16px;letter-spacing:0.5px;
+}
+.rank-1 .p-name { color:var(--gold);text-shadow:0 0 16px rgba(255,215,0,0.4); }
+.rank-2 .p-name { color:var(--silver); }
+.rank-3 .p-name { color:var(--bronze); }
+.rank-other .p-name { color:var(--champ); }
+
+.rank-tag {
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:0.5;margin-top:1px;
+}
+
+/* ── Score ── */
+.score-col { text-align:center; }
+.score-val {
+  font-family:'Orbitron',monospace;font-size:15px;font-weight:700;
+  letter-spacing:1px;
+}
+.rank-1 .score-val { color:var(--gold); }
+.rank-2 .score-val { color:var(--silver); }
+.rank-3 .score-val { color:var(--bronze); }
+.rank-other .score-val { color:var(--champ2); }
+
+.score-bar-wrap {
+  margin-top:5px;height:3px;
+  background:rgba(247,231,206,0.08);border-radius:2px;overflow:hidden;
+}
+.score-bar {
+  height:100%;border-radius:2px;
+  background:linear-gradient(to right,var(--accent),var(--accent2));
+  transition:width 1s ease;
+}
+.rank-1 .score-bar { background:linear-gradient(to right,var(--gold),#ffa500); }
+.rank-2 .score-bar { background:linear-gradient(to right,var(--silver),#a0a0a0); }
+.rank-3 .score-bar { background:linear-gradient(to right,var(--bronze),#8b5a2b); }
+
+/* ── Date ── */
+.date-col {
+  text-align:right;font-size:12px;
+  color:rgba(247,231,206,0.3);letter-spacing:0.5px;
+}
+
+/* ── Crown icon ── */
+.crown { font-size:16px;margin-left:4px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN PANEL
+═══════════════════════════════════════════════════════════════════════════ */
+{% if is_admin %}
+.admin-section {
+  margin-top:60px;
+  animation:fade-up 0.7s ease 0.6s both;
+}
+.admin-header {
+  display:flex;align-items:center;gap:12px;margin-bottom:20px;
+}
+.admin-badge-title {
+  font-family:'Orbitron',monospace;font-size:12px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;
+  padding:5px 12px;
+  background:rgba(255,215,0,0.12);
+  border:1px solid rgba(255,215,0,0.35);
+  border-radius:6px;color:var(--gold);
+}
+
+.admin-card {
+  background:var(--glass-bg);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,215,0,0.15);
+  border-radius:20px;overflow:hidden;
+  box-shadow:0 8px 60px rgba(0,0,0,0.4),0 0 40px rgba(255,215,0,0.06);
+}
+
+.admin-table { width:100%;border-collapse:collapse; }
+.admin-table th {
+  padding:13px 20px;
+  font-size:10px;letter-spacing:3px;text-transform:uppercase;
+  color:rgba(255,215,0,0.5);font-weight:600;
+  background:rgba(0,0,0,0.2);
+  text-align:left;border-bottom:1px solid rgba(255,215,0,0.12);
+}
+.admin-table th:last-child { text-align:right; }
+.admin-table td {
+  padding:13px 20px;font-size:14px;font-weight:600;
+  border-bottom:1px solid rgba(247,231,206,0.05);
+  vertical-align:middle;
+}
+.admin-table tr:last-child td { border-bottom:none; }
+.admin-table tr:hover td { background:rgba(255,215,0,0.04); }
+
+/* edit form inline */
+.edit-form { display:flex;align-items:center;gap:8px; }
+.edit-input {
+  width:110px;padding:7px 10px;
+  background:rgba(16,44,38,0.7);
+  border:1px solid rgba(255,215,0,0.25);
+  border-radius:7px;
+  color:var(--champ);font-family:'Orbitron',monospace;
+  font-size:13px;font-weight:700;outline:none;
+}
+.edit-input:focus { border-color:rgba(255,215,0,0.55); }
+
+.btn-edit {
+  padding:7px 14px;
+  background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.35);
+  border-radius:7px;color:var(--gold);font-family:'Rajdhani',sans-serif;
+  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all 0.2s;
+}
+.btn-edit:hover { background:rgba(255,215,0,0.22);box-shadow:0 0 12px rgba(255,215,0,0.2); }
+
+.btn-delete {
+  padding:7px 12px;
+  background:rgba(255,78,106,0.1);border:1px solid rgba(255,78,106,0.3);
+  border-radius:7px;color:var(--danger);font-family:'Rajdhani',sans-serif;
+  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all 0.2s;
+}
+.btn-delete:hover { background:rgba(255,78,106,0.2);box-shadow:0 0 12px rgba(255,78,106,0.2); }
+
+.actions-cell { text-align:right; }
+.actions-cell > * { display:inline-block; }
+{% endif %}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCORE SUBMIT (User Panel)
+═══════════════════════════════════════════════════════════════════════════ */
+.submit-section {
+  margin-top:48px;
+  animation:fade-up 0.7s ease 0.5s both;
+}
+.submit-card {
+  background:var(--glass-bg);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--glass-bdr);
+  border-radius:20px;padding:32px 36px;
+  box-shadow:0 8px 60px rgba(0,0,0,0.3),inset 0 1px 0 rgba(247,231,206,0.06);
+}
+.submit-title {
+  font-family:'Orbitron',monospace;font-size:12px;font-weight:700;
+  letter-spacing:4px;text-transform:uppercase;color:var(--champ2);opacity:0.7;
+  margin-bottom:20px;
+}
+.submit-row { display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap; }
+.sub-group { display:flex;flex-direction:column;gap:7px; }
+.sub-label { font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(247,231,206,0.45); }
+.sub-input {
+  padding:11px 16px;
+  background:rgba(16,44,38,0.7);
+  border:1px solid var(--glass-bdr);border-radius:10px;
+  color:var(--champ);font-family:'Orbitron',monospace;
+  font-size:14px;font-weight:700;width:160px;outline:none;
+  transition:border-color 0.25s,box-shadow 0.25s;
+}
+.sub-input:focus {
+  border-color:rgba(79,255,176,0.5);
+  box-shadow:0 0 0 3px rgba(79,255,176,0.08);
+}
+.btn-submit {
+  padding:12px 28px;
+  background:linear-gradient(135deg,rgba(79,255,176,0.22),rgba(0,229,255,0.15));
+  border:1px solid rgba(79,255,176,0.4);border-radius:10px;
+  color:var(--champ);font-family:'Orbitron',monospace;
+  font-size:12px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+  cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;
+}
+.btn-submit:hover { box-shadow:0 0 24px rgba(79,255,176,0.3);transform:translateY(-1px); }
+
+.sub-result {
+  margin-top:14px;padding:10px 14px;border-radius:8px;
+  font-size:13px;font-weight:600;letter-spacing:0.3px;
+  display:none;
+}
+.sub-result.success { background:rgba(79,255,176,0.12);border:1px solid rgba(79,255,176,0.35);color:var(--accent); }
+.sub-result.error   { background:rgba(255,78,106,0.12);border:1px solid rgba(255,78,106,0.35);color:var(--danger); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FLASH
+═══════════════════════════════════════════════════════════════════════════ */
+.flash-list { list-style:none;margin-bottom:24px; }
+.flash-item {
+  padding:11px 16px;border-radius:9px;
+  font-size:13px;font-weight:600;margin-bottom:8px;
+  border-left:3px solid;
+  animation:flash-in 0.4s ease both;
+}
+@keyframes flash-in {
+  from{opacity:0;transform:translateX(-14px);}
+  to{opacity:1;transform:translateX(0);}
+}
+.flash-success{background:rgba(79,255,176,0.1);border-color:#4fffb0;color:#4fffb0;}
+.flash-error  {background:rgba(255,78,106,0.1);border-color:#ff4e6a;color:#ff4e6a;}
+.flash-info   {background:rgba(0,229,255,0.1); border-color:#00e5ff;color:#00e5ff;}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════════════════════════════════ */
+.footer {
+  text-align:center;margin-top:60px;padding-top:24px;
+  border-top:1px solid var(--glass-bdr);
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(247,231,206,0.2);
+}
+
+/* ── Responsive ── */
+@media(max-width:640px){
+  .lb-thead,.lb-row { grid-template-columns:50px 1fr 120px; }
+  .lb-thead span:nth-child(4),.lb-row .date-col { display:none; }
+  .stats-row { grid-template-columns:1fr; }
+  .topbar { flex-wrap:wrap;gap:12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Orbs -->
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<!-- Particles -->
+<script>
+for(let i=0;i<20;i++){
+  const p=document.createElement('div');
+  p.className='particle';
+  p.style.cssText=`left:${Math.random()*100}%;width:${1+Math.random()*3}px;height:${1+Math.random()*3}px;animation-duration:${8+Math.random()*12}s;animation-delay:${-Math.random()*16}s;background:${Math.random()>.5?'#4fffb0':'#F7E7CE'};`;
+  document.body.appendChild(p);
+}
+</script>
+
+<div class="page">
+
+  <!-- ── Top Bar ── -->
+  <nav class="topbar">
+    <div class="topbar-left">
+      <div class="top-icon">
+        <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11 2L20 7V15L11 20L2 15V7L11 2Z" stroke="#4fffb0" stroke-width="1.3" fill="rgba(79,255,176,0.1)"/>
+          <circle cx="11" cy="11" r="3" fill="#4fffb0" opacity=".8"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand">GameBoard</div>
+        <div class="brand-sub">Live Leaderboard</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      {% if is_admin %}
+        <span class="badge-admin">⚙ Admin</span>
+      {% endif %}
+      <div class="player-badge">
+        <div class="player-dot"></div>
+        {{ username }}
+      </div>
+      <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flash-list">
+        {% for category, message in messages %}
+          <li class="flash-item flash-{{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div class="live-badge"><div class="live-dot"></div> Live Rankings</div>
+    <h1 class="hero-title">Top <em>Legends</em></h1>
+    <p class="hero-sub">Real-time scores — updated via atomic DynamoDB counters</p>
+  </div>
+
+  <!-- ── Stats ── -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-val">{{ top10 | length }}</div>
+      <div class="stat-lbl">Elite Players</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">
+        {% if top10 %}
+          {{ "{:,}".format(top10[0].score | int) }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-lbl">Top Score</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="live-clock">--:--:--</div>
+      <div class="stat-lbl">Server Time</div>
+    </div>
+  </div>
+
+  <!-- ── Leaderboard ── -->
+  <section class="lb-section">
+    <div class="section-header">
+      <span class="section-title">⚡ &nbsp; Global Rankings — Top 10</span>
+      <button class="refresh-btn" onclick="refreshLeaderboard()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M11 6.5a4.5 4.5 0 1 1-1.4-3.2" stroke="#4fffb0" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M9.6 1v2.5H12" stroke="#4fffb0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+    <div class="lb-card" id="lb-card">
+      <div class="lb-thead">
+        <span>Rank</span>
+        <span>Player</span>
+        <span style="text-align:center">Score</span>
+        <span>Updated</span>
+      </div>
+      <div class="lb-body" id="lb-body">
+        {% set max_score = top10[0].score | int if top10 else 1 %}
+        {% for entry in top10 %}
+          {% set rank = entry.rank %}
+          {% set rank_class = 'rank-1' if rank == 1 else ('rank-2' if rank == 2 else ('rank-3' if rank == 3 else 'rank-other')) %}
+          <div class="lb-row {{ rank_class }}">
+            <!-- Rank -->
+            <div>
+              <div class="rank-badge">
+                {% if rank == 1 %}👑{% elif rank == 2 %}②{% elif rank == 3 %}③{% else %}{{ rank }}{% endif %}
+              </div>
+            </div>
+            <!-- Player -->
+            <div class="player-info">
+              <div class="avatar">{{ entry.username[0] | upper }}</div>
+              <div>
+                <div class="p-name">{{ entry.username }}{% if rank == 1 %}<span class="crown">🏆</span>{% endif %}</div>
+                <div class="rank-tag">
+                  {% if rank == 1 %}Champion{% elif rank <= 3 %}Elite{% elif rank <= 6 %}Veteran{% else %}Challenger{% endif %}
+                </div>
+              </div>
+            </div>
+            <!-- Score -->
+            <div class="score-col">
+              <div class="score-val">{{ "{:,}".format(entry.score | int) }}</div>
+              <div class="score-bar-wrap">
+                <div class="score-bar" style="width:{{ [(entry.score | int / max_score * 100) | int, 100] | min }}%"></div>
+              </div>
+            </div>
+            <!-- Date -->
+            <div class="date-col">
+              {{ entry.updated_at[:10] if entry.updated_at else '—' }}
+            </div>
+          </div>
+        {% else %}
+          <div style="padding:40px;text-align:center;color:rgba(247,231,206,0.3);letter-spacing:2px;font-size:13px;">
+            NO SCORES YET — BE THE FIRST!
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Submit Score ── -->
+  <section class="submit-section">
+    <div class="submit-card">
+      <div class="submit-title">⬆ Submit Score</div>
+      <div class="submit-row">
+        <div class="sub-group">
+          <span class="sub-label">Points Earned</span>
+          <input class="sub-input" type="number" id="score-input" placeholder="e.g. 12500" min="0"/>
+        </div>
+        <div class="sub-group">
+          <span class="sub-label">Session (seconds)</span>
+          <input class="sub-input" type="number" id="duration-input" placeholder="e.g. 300" min="30"/>
+        </div>
+        <button class="btn-submit" onclick="submitScore()">Submit ▶</button>
+      </div>
+      <div class="sub-result" id="sub-result"></div>
+    </div>
+  </section>
+
+  <!-- ═══ ADMIN PANEL ═══ -->
+  {% if is_admin %}
+  <section class="admin-section">
+    <div class="admin-header">
+      <span class="admin-badge-title">⚙ Admin Console — All Scores</span>
+    </div>
+    <div class="admin-card">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>User ID</th>
+            <th>Score</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in all_scores %}{% set i = loop.index %}
+          <tr>
+            <td style="color:rgba(247,231,206,0.4);font-family:'Orbitron',monospace;font-size:12px;">{{ i }}</td>
+            <td style="font-weight:700;">{{ entry.username }}</td>
+            <td style="font-family:'Orbitron',monospace;font-size:11px;color:rgba(247,231,206,0.35);">{{ entry.user_id[:8] }}…</td>
+            <td style="font-family:'Orbitron',monospace;color:var(--champ2);">{{ "{:,}".format(entry.score | int) }}</td>
+            <td class="actions-cell">
+              <form method="POST" action="{{ url_for('admin_edit_score') }}" class="edit-form" style="display:inline-flex;">
+                <input type="hidden" name="user_id"  value="{{ entry.user_id }}"/>
+                <input type="hidden" name="username" value="{{ entry.username }}"/>
+                <input class="edit-input" type="number" name="score"
+                       value="{{ entry.score | int }}" min="0"/>
+                <button type="submit" class="btn-edit">Save</button>
+              </form>
+              &nbsp;
+              <form method="POST"
+                    action="{{ url_for('admin_delete_score', user_id=entry.user_id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Delete {{ entry.username }}\'s score?')">
+                <button type="submit" class="btn-delete">✕ Del</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="footer">GameBoard v2.0 &nbsp;·&nbsp; AWS DynamoDB + SNS &nbsp;·&nbsp; Flask + Boto3</div>
+</div>
+
+<script>
+/* ── Live clock ── */
+function updateClock(){
+  const now=new Date();
+  document.getElementById('live-clock').textContent=
+    now.toUTCString().slice(17,25)+' UTC';
+}
+setInterval(updateClock,1000); updateClock();
+
+/* ── Submit score ── */
+async function submitScore(){
+  const score    = parseInt(document.getElementById('score-input').value)||0;
+  const duration = parseInt(document.getElementById('duration-input').value)||0;
+  const res      = document.getElementById('sub-result');
+  res.style.display='none';
+
+  try{
+    const r=await fetch('/submit_score',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({score,session_duration:duration})
+    });
+    const d=await r.json();
+    res.style.display='block';
+    if(d.success){
+      res.className='sub-result success';
+      res.textContent=`✔ Score submitted! New total: ${d.new_score.toLocaleString()} pts. Refreshing…`;
+      setTimeout(refreshLeaderboard,1500);
+    }else{
+      res.className='sub-result error';
+      res.textContent=`✘ ${d.error}`;
+    }
+  }catch(e){
+    res.style.display='block';
+    res.className='sub-result error';
+    res.textContent='Network error — please try again.';
+  }
+}
+
+/* ── Live refresh ── */
+async function refreshLeaderboard(){
+  try{
+    const r=await fetch('/api/leaderboard');
+    const data=await r.json();
+    buildLeaderboard(data);
+  }catch(e){ console.warn('Refresh failed',e); }
+}
+
+function buildLeaderboard(entries){
+  const body=document.getElementById('lb-body');
+  if(!entries.length){
+    body.innerHTML='<div style="padding:40px;text-align:center;color:rgba(247,231,206,0.3);letter-spacing:2px;font-size:13px;">NO SCORES YET</div>';
+    return;
+  }
+  const maxScore=entries[0].score||1;
+  const rankLabels=['Champion','','','Elite','Elite','Elite','Veteran','Veteran','Challenger','Challenger'];
+  const rankMedals=['👑','②','③'];
+
+  body.innerHTML=entries.map((e,i)=>{
+    const rank=i+1;
+    const cls=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-other';
+    const medal=rank<=3?rankMedals[i]:rank;
+    const bar=Math.min(Math.round(e.score/maxScore*100),100);
+    const scoreColor=rank===1?'var(--gold)':rank===2?'var(--silver)':rank===3?'var(--bronze)':'var(--champ2)';
+    const nameColor=rank===1?'var(--gold)':rank===2?'var(--silver)':rank===3?'var(--bronze)':'var(--champ)';
+    const barColor=rank===1?'linear-gradient(to right,var(--gold),#ffa500)':rank===2?'linear-gradient(to right,var(--silver),#a0a0a0)':rank===3?'linear-gradient(to right,var(--bronze),#8b5a2b)':'linear-gradient(to right,var(--accent),var(--accent2))';
+    const lbl=rankLabels[i]||(rank<=6?'Veteran':'Challenger');
+    const date=(e.updated_at||'').slice(0,10)||'—';
+
+    return `<div class="lb-row ${cls}" style="animation:row-in 0.4s ease ${i*0.06}s both">
+      <div><div class="rank-badge">${medal}</div></div>
+      <div class="player-info">
+        <div class="avatar">${e.username[0].toUpperCase()}</div>
+        <div>
+          <div class="p-name" style="color:${nameColor}">${e.username}${rank===1?'<span class="crown">🏆</span>':''}</div>
+          <div class="rank-tag">${rank===1?'Champion':lbl}</div>
+        </div>
+      </div>
+      <div class="score-col">
+        <div class="score-val" style="color:${scoreColor}">${e.score.toLocaleString()}</div>
+        <div class="score-bar-wrap"><div class="score-bar" style="width:${bar}%;background:${barColor}"></div></div>
+      </div>
+      <div class="date-col">${date}</div>
+    </div>`;
+  }).join('');
+}
+
+/* auto-refresh every 30 s */
+setInterval(refreshLeaderboard, 30000);
+</script>
+
+{% if is_admin %}
+<script>
+/* Jinja enumerate helper not built-in — use loop.index instead. 
+   The template already uses loop variable correctly. */
+</script>
+{% endif %}
+
+</body>
+</html>

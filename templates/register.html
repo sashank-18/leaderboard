@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GameBoard — Register</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #102C26;
+    --bg2:       #0a1f1b;
+    --champ:     #F7E7CE;
+    --champ2:    #e8d4b5;
+    --accent:    #4fffb0;
+    --accent2:   #00e5ff;
+    --danger:    #ff4e6a;
+    --glass-bg:  rgba(16,44,38,0.55);
+    --glass-bdr: rgba(247,231,206,0.18);
+    --glow:      0 0 30px rgba(79,255,176,0.25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg2);
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--champ);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      linear-gradient(135deg, #102C26 0%, #0a1f1b 50%, #071510 100%),
+      repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(79,255,176,0.03) 60px, rgba(79,255,176,0.03) 61px),
+      repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(79,255,176,0.03) 60px, rgba(79,255,176,0.03) 61px);
+    z-index: 0;
+  }
+
+  .orb {
+    position: fixed; border-radius: 50%;
+    filter: blur(80px); opacity: 0.18;
+    animation: drift 14s ease-in-out infinite alternate;
+    pointer-events: none; z-index: 0;
+  }
+  .orb1 { width: 450px; height: 450px; background: #00e5ff; top: -100px; right: -100px; }
+  .orb2 { width: 380px; height: 380px; background: #4fffb0; bottom: -80px; left: -80px; animation-delay: -6s; }
+
+  @keyframes drift {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(30px,25px) scale(1.08); }
+  }
+
+  .particle {
+    position: fixed; border-radius: 50%;
+    animation: float-up linear infinite; opacity: 0; z-index: 0;
+  }
+  @keyframes float-up {
+    0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+    10%  { opacity: 0.6; }
+    90%  { opacity: 0.25; }
+    100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+  }
+
+  .card-wrap {
+    position: relative; z-index: 10;
+    animation: fade-in 0.8s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(40px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .card {
+    width: 440px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid var(--glass-bdr);
+    border-radius: 20px;
+    padding: 44px 40px 40px;
+    box-shadow:
+      0 8px 60px rgba(0,0,0,0.5),
+      var(--glow),
+      inset 0 1px 0 rgba(247,231,206,0.1);
+  }
+
+  .logo-wrap { text-align: center; margin-bottom: 32px; }
+  .logo-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, rgba(0,229,255,0.2), rgba(79,255,176,0.15));
+    border: 1px solid rgba(0,229,255,0.4);
+    border-radius: 16px; margin-bottom: 14px;
+    box-shadow: 0 0 24px rgba(0,229,255,0.2);
+    animation: pulse-icon 3s ease-in-out infinite;
+  }
+  @keyframes pulse-icon {
+    0%,100% { box-shadow: 0 0 20px rgba(0,229,255,0.2); }
+    50%      { box-shadow: 0 0 44px rgba(0,229,255,0.45); }
+  }
+  .logo-icon svg { width: 32px; height: 32px; }
+  .logo-title {
+    font-family: 'Orbitron', monospace; font-size: 20px; font-weight: 900;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--champ); text-shadow: 0 0 20px rgba(247,231,206,0.4);
+  }
+  .logo-sub {
+    font-size: 11px; letter-spacing: 3px; color: var(--accent2);
+    text-transform: uppercase; margin-top: 4px; opacity: 0.85;
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .form-group { margin-bottom: 18px; position: relative; }
+  label {
+    display: block; font-size: 11px; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--champ2);
+    margin-bottom: 8px; opacity: 0.75;
+  }
+
+  input[type="text"], input[type="password"], select {
+    width: 100%;
+    background: rgba(16,44,38,0.6);
+    border: 1px solid var(--glass-bdr);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--champ);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px; font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    outline: none;
+  }
+  input:focus, select:focus {
+    border-color: rgba(0,229,255,0.5);
+    box-shadow: 0 0 0 3px rgba(0,229,255,0.1), 0 0 16px rgba(0,229,255,0.12);
+  }
+  input::placeholder { color: rgba(247,231,206,0.28); }
+
+  /* Password strength bar */
+  .strength-bar {
+    margin-top: 6px; height: 3px;
+    background: rgba(247,231,206,0.1);
+    border-radius: 2px; overflow: hidden;
+  }
+  .strength-fill {
+    height: 100%; width: 0%;
+    border-radius: 2px;
+    transition: width 0.3s, background 0.3s;
+  }
+  .strength-label {
+    font-size: 10px; letter-spacing: 1.5px;
+    margin-top: 4px; opacity: 0.6;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, rgba(0,229,255,0.22), rgba(79,255,176,0.15));
+    border: 1px solid rgba(0,229,255,0.5);
+    border-radius: 10px;
+    color: var(--champ);
+    font-family: 'Orbitron', monospace; font-size: 12px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.3s;
+    margin-top: 24px; position: relative; overflow: hidden;
+  }
+  .btn-primary::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,229,255,0.3), rgba(79,255,176,0.2));
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 30px rgba(0,229,255,0.35), 0 4px 20px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-primary:hover::after { opacity: 1; }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 22px 0 18px;
+    color: rgba(247,231,206,0.3); font-size: 11px; letter-spacing: 2px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(to right, transparent, rgba(247,231,206,0.2), transparent);
+  }
+
+  .link-row {
+    text-align: center; font-size: 13px;
+    color: rgba(247,231,206,0.55); letter-spacing: 0.5px;
+  }
+  .link-row a {
+    color: var(--accent2); text-decoration: none;
+    font-weight: 600; transition: text-shadow 0.2s;
+  }
+  .link-row a:hover { text-shadow: 0 0 12px rgba(0,229,255,0.6); }
+
+  .flash-list { list-style: none; margin-bottom: 18px; }
+  .flash-item {
+    padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
+    margin-bottom: 8px; border-left: 3px solid;
+    animation: flash-slide 0.4s ease both;
+  }
+  @keyframes flash-slide {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .flash-success { background: rgba(79,255,176,0.12); border-color: #4fffb0; color: #4fffb0; }
+  .flash-error   { background: rgba(255,78,106,0.12); border-color: #ff4e6a; color: #ff4e6a; }
+  .flash-info    { background: rgba(0,229,255,0.12);  border-color: #00e5ff; color: #00e5ff; }
+
+  /* Terms checkbox */
+  .checkbox-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-top: 6px; margin-bottom: 4px;
+  }
+  .checkbox-row input[type="checkbox"] {
+    width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;
+    accent-color: var(--accent2); cursor: pointer;
+  }
+  .checkbox-row label {
+    font-size: 12px; margin: 0; letter-spacing: 0.3px;
+    opacity: 0.65; text-transform: none; font-weight: 400;
+    line-height: 1.5; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<script>
+  for (let i = 0; i < 16; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `
+      left:${Math.random()*100}%;
+      width:${1+Math.random()*3}px; height:${1+Math.random()*3}px;
+      animation-duration:${7+Math.random()*9}s;
+      animation-delay:${-Math.random()*14}s;
+      background:${Math.random()>.5?'#00e5ff':'#F7E7CE'};
+    `;
+    document.body.appendChild(p);
+  }
+</script>
+
+<div class="card-wrap">
+  <div class="card">
+
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="12" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.1)"/>
+          <path d="M16 9v7l5 3" stroke="#4fffb0" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="16" cy="16" r="2.5" fill="#00e5ff"/>
+        </svg>
+      </div>
+      <div class="logo-title">Register</div>
+      <div class="logo-sub">Join the Arena</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flash-list">
+          {% for category, message in messages %}
+            <li class="flash-item flash-{{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('register') }}">
+      <div class="form-group">
+        <label for="username">Player Tag</label>
+        <input type="text" id="username" name="username" placeholder="Choose a unique name" autocomplete="username" minlength="3" required />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Access Code</label>
+        <input type="password" id="password" name="password" placeholder="Min 6 characters" autocomplete="new-password" minlength="6" required />
+        <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+        <div class="strength-label" id="strength-label">—</div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password">Confirm Access Code</label>
+        <input type="password" id="confirm_password" name="confirm_password" placeholder="Re-enter your code" autocomplete="new-password" required />
+      </div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="terms" name="terms" required />
+        <label for="terms">I agree to the Rules of the Arena and understand that cheating leads to permanent ban.</label>
+      </div>
+
+      <button type="submit" class="btn-primary"><span>⚡ &nbsp; Create Account</span></button>
+    </form>
+
+    <div class="divider">already a player?</div>
+    <div class="link-row">
+      <a href="{{ url_for('login') }}">← Back to Login</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const pwInput = document.getElementById('password');
+  const fill    = document.getElementById('strength-fill');
+  const label   = document.getElementById('strength-label');
+
+  pwInput.addEventListener('input', () => {
+    const v = pwInput.value;
+    let score = 0;
+    if (v.length >= 6)  score++;
+    if (v.length >= 10) score++;
+    if (/[A-Z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+
+    const levels = [
+      { pct:  0,  color: 'transparent', text: '—' },
+      { pct: 20,  color: '#ff4e6a',     text: 'WEAK' },
+      { pct: 40,  color: '#ff9f43',     text: 'FAIR' },
+      { pct: 70,  color: '#F7E7CE',     text: 'GOOD' },
+      { pct: 90,  color: '#4fffb0',     text: 'STRONG' },
+      { pct: 100, color: '#00e5ff',     text: 'ELITE' },
+    ];
+    const l = levels[Math.min(score, 5)];
+    fill.style.width     = l.pct + '%';
+    fill.style.background = l.color;
+    label.textContent    = l.text;
+    label.style.color    = l.color;
+  });
+</script>
+
+</body>
+</html>

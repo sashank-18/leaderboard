@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GameBoard — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #102C26;
+    --bg2:       #0a1f1b;
+    --champ:     #F7E7CE;
+    --champ2:    #e8d4b5;
+    --accent:    #4fffb0;
+    --accent2:   #00e5ff;
+    --danger:    #ff4e6a;
+    --glass-bg:  rgba(16, 44, 38, 0.55);
+    --glass-bdr: rgba(247, 231, 206, 0.18);
+    --glow:      0 0 30px rgba(79, 255, 176, 0.25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg2);
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--champ);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Animated background grid ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      linear-gradient(135deg, #102C26 0%, #0a1f1b 50%, #071510 100%),
+      repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(79,255,176,0.03) 60px, rgba(79,255,176,0.03) 61px),
+      repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(79,255,176,0.03) 60px, rgba(79,255,176,0.03) 61px);
+    z-index: 0;
+  }
+
+  /* ── Floating orbs ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
+    animation: drift 12s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb1 { width: 500px; height: 500px; background: #4fffb0; top: -150px; left: -150px; animation-delay: 0s; }
+  .orb2 { width: 400px; height: 400px; background: #00e5ff; bottom: -100px; right: -100px; animation-delay: -5s; }
+  .orb3 { width: 300px; height: 300px; background: #F7E7CE; top: 40%; left: 60%; animation-delay: -8s; opacity: 0.08; }
+
+  @keyframes drift {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(40px, 30px) scale(1.05); }
+  }
+
+  /* ── Particles ── */
+  .particle {
+    position: fixed;
+    width: 3px; height: 3px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: float-up linear infinite;
+    opacity: 0;
+    z-index: 0;
+  }
+  @keyframes float-up {
+    0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+    10%  { opacity: 0.7; }
+    90%  { opacity: 0.3; }
+    100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+  }
+
+  /* ── Main card ── */
+  .card-wrap {
+    position: relative; z-index: 10;
+    animation: fade-in 0.8s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(40px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .card {
+    width: 420px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid var(--glass-bdr);
+    border-radius: 20px;
+    padding: 48px 40px 44px;
+    box-shadow:
+      0 8px 60px rgba(0,0,0,0.5),
+      var(--glow),
+      inset 0 1px 0 rgba(247,231,206,0.1);
+  }
+
+  /* ── Logo ── */
+  .logo-wrap {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .logo-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 68px; height: 68px;
+    background: linear-gradient(135deg, rgba(79,255,176,0.2), rgba(0,229,255,0.15));
+    border: 1px solid rgba(79,255,176,0.4);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 0 24px rgba(79,255,176,0.2);
+    animation: pulse-icon 3s ease-in-out infinite;
+  }
+  @keyframes pulse-icon {
+    0%,100% { box-shadow: 0 0 24px rgba(79,255,176,0.2); }
+    50%      { box-shadow: 0 0 48px rgba(79,255,176,0.45); }
+  }
+  .logo-icon svg { width: 34px; height: 34px; }
+  .logo-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--champ);
+    text-shadow: 0 0 20px rgba(247,231,206,0.4);
+  }
+  .logo-sub {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-top: 4px;
+    opacity: 0.85;
+  }
+
+  /* ── Form ── */
+  .form-group {
+    margin-bottom: 20px;
+    position: relative;
+  }
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--champ2);
+    margin-bottom: 8px;
+    opacity: 0.75;
+  }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    background: rgba(16,44,38,0.6);
+    border: 1px solid var(--glass-bdr);
+    border-radius: 10px;
+    padding: 13px 16px;
+    color: var(--champ);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="password"]:focus {
+    border-color: rgba(79,255,176,0.5);
+    box-shadow: 0 0 0 3px rgba(79,255,176,0.1), 0 0 16px rgba(79,255,176,0.12);
+  }
+  input::placeholder { color: rgba(247,231,206,0.28); }
+
+  /* ── Button ── */
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(79,255,176,0.22), rgba(0,229,255,0.15));
+    border: 1px solid rgba(79,255,176,0.5);
+    border-radius: 10px;
+    color: var(--champ);
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(79,255,176,0.3), rgba(0,229,255,0.2));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 30px rgba(79,255,176,0.3), 0 4px 20px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-primary:hover::after { opacity: 1; }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  /* ── Divider ── */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 24px 0 20px;
+    color: rgba(247,231,206,0.3);
+    font-size: 11px; letter-spacing: 2px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(247,231,206,0.2), transparent);
+  }
+
+  /* ── Links ── */
+  .link-row {
+    text-align: center;
+    font-size: 13px;
+    color: rgba(247,231,206,0.55);
+    letter-spacing: 0.5px;
+  }
+  .link-row a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: text-shadow 0.2s, opacity 0.2s;
+  }
+  .link-row a:hover {
+    text-shadow: 0 0 12px rgba(79,255,176,0.6);
+    opacity: 0.85;
+  }
+
+  /* ── Flash messages ── */
+  .flash-list { list-style: none; margin-bottom: 20px; }
+  .flash-item {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    margin-bottom: 8px;
+    border-left: 3px solid;
+    animation: flash-slide 0.4s ease both;
+  }
+  @keyframes flash-slide {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .flash-success { background: rgba(79,255,176,0.12); border-color: #4fffb0; color: #4fffb0; }
+  .flash-error   { background: rgba(255,78,106,0.12); border-color: #ff4e6a; color: #ff4e6a; }
+  .flash-info    { background: rgba(0,229,255,0.12);  border-color: #00e5ff; color: #00e5ff; }
+
+  /* ── Demo hint ── */
+  .demo-hint {
+    margin-top: 22px;
+    padding: 12px 14px;
+    background: rgba(247,231,206,0.05);
+    border: 1px solid rgba(247,231,206,0.1);
+    border-radius: 8px;
+    font-size: 11.5px;
+    color: rgba(247,231,206,0.45);
+    line-height: 1.7;
+    letter-spacing: 0.3px;
+  }
+  .demo-hint strong { color: rgba(247,231,206,0.65); }
+</style>
+</head>
+<body>
+
+<!-- Orbs -->
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<!-- Particles -->
+<script>
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `
+      left: ${Math.random()*100}%;
+      animation-duration: ${6+Math.random()*10}s;
+      animation-delay: ${-Math.random()*12}s;
+      width:  ${1+Math.random()*3}px;
+      height: ${1+Math.random()*3}px;
+      background: ${Math.random()>.5?'#4fffb0':'#F7E7CE'};
+    `;
+    document.body.appendChild(p);
+  }
+</script>
+
+<div class="card-wrap">
+  <div class="card">
+
+    <!-- Logo -->
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 3L31 10V24L17 31L3 24V10L17 3Z" stroke="#4fffb0" stroke-width="1.5" fill="rgba(79,255,176,0.1)"/>
+          <circle cx="17" cy="17" r="5" fill="#4fffb0" opacity=".8"/>
+          <path d="M17 8V12M17 22V26M8 17H12M22 17H26" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="logo-title">GameBoard</div>
+      <div class="logo-sub">Elite Leaderboard System</div>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flash-list">
+          {% for category, message in messages %}
+            <li class="flash-item flash-{{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Form -->
+    <form method="POST" action="{{ url_for('login') }}">
+      <div class="form-group">
+        <label for="username">Player Tag</label>
+        <input type="text" id="username" name="username" placeholder="Enter your username" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Access Code</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn-primary"><span>▶ &nbsp; Enter the Arena</span></button>
+    </form>
+
+    <div class="divider">or</div>
+
+    <div class="link-row">
+      New player? <a href="{{ url_for('register') }}">Create Account</a>
+    </div>
+
+    <div class="demo-hint">
+      <strong>Demo Credentials</strong><br>
+      Admin: <strong>admin</strong> / <strong>admin123</strong><br>
+      Player: <strong>player</strong> / <strong>player123</strong>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
