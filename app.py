@@ -48,10 +48,10 @@ login_manager.login_message = "Please log in to access the leaderboard."
 # AWS Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
-AWS_REGION       = os.environ.get("AWS_REGION", "us-east-1")
+AWS_REGION       = os.environ.get("AWS_REGION", "ap-south-1")
 DYNAMO_TABLE     = os.environ.get("DYNAMO_TABLE", "GameLeaderboard")
 USER_TABLE       = os.environ.get("USER_TABLE", "GameUsers")
-SNS_TOPIC_ARN    = os.environ.get("SNS_TOPIC_ARN", "")
+SNS_TOPIC_ARN    = os.environ.get("SNS_TOPIC_ARN", "arn:aws:sns:ap-south-1:152655458564:GamingAlerts")
 
 # ── IAM Least-Privilege policy doc (documentation / audit log) ────────────────
 IAM_POLICY = {
